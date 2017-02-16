@@ -1,17 +1,17 @@
 defmodule Exometer.NewrelicReporter do
+  require Logger
   use Application
 
   @behaviour :exometer_report
 
-  alias HTTPoison.Response
   alias Exometer.NewrelicReporter.{Collector, Reporter}
 
-  def start(_type, _args) do
+  def start(_type, opts) do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(Collector, []),
-      worker(Reporter, [])
+      worker(Collector, opts),
+      worker(Reporter, opts)
     ]
 
     opts = [strategy: :one_for_one, name: Collector.Supervisor]
@@ -21,15 +21,18 @@ defmodule Exometer.NewrelicReporter do
   @doc """
   Entrypoint to our reporter, invoked by Exometer with configuration options.
   """
-  def exometer_init(opts), do: {:ok, opts}
+  def exometer_init(opts) do 
+    Logger.info "New Relic plugin starting with opts: #{inspect(opts)}"
+    Reporter.set_configuration(opts)
+    {:ok, opts}
+  end
 
   @doc """
   Invoked by Exometer when there is new data to report.
   """
-  def exometer_report(metric, _data_point, _extra, values, opts) do
-    Collector.collect(metric, values)
-
-    {:ok, opts}
+  def exometer_report(metric, data_point, _extra, values, settings) do
+    Collector.collect(metric, data_point, values, settings)
+    {:ok, settings}
   end
 
   def exometer_call(_, _, opts),            do: {:ok, opts}

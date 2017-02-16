@@ -1,16 +1,13 @@
 defmodule Exometer.NewrelicReporter.Request do
-  @behaviour :exometer_report
-
   require Logger
-  require IEx
 
   alias HTTPoison.Response
 
-  @agent_version "1.5.0.103"
-  @base_url "https://~s/agent_listener/invoke_raw_method"
+  @agent_version "2.78.0.57"
+  @base_url "http://~s/agent_listener/invoke_raw_method"
   @collector "collector.newrelic.com"
-  @language "python" # We're mimicking newrelic-erlang
-  @protocol_v 10
+  @language "python"
+  @protocol_v 14
 
   def request(data, opts) do
     license_key = Keyword.fetch!(opts, :license_key)
@@ -25,13 +22,16 @@ defmodule Exometer.NewrelicReporter.Request do
   @doc """
   Record metrics on New Relic
   """
-  def push_metrics({redirect_host, license_key, run_id}, data) do
+  def push_metrics({redirect_host, license_key, agent_run_id}, data) do
     now  = :os.system_time(:seconds)
     body =
-      [run_id, now - 60, now, data]
+      [agent_run_id, now - 60, now, data]
       |> Poison.encode!
 
-    newrelic_request(redirect_host, license_key, body, %{method: :metric_data, run_id: run_id})
+    newrelic_request(
+      redirect_host, license_key, body,
+      %{method: :metric_data, run_id: agent_run_id}
+    )
   end
 
   @doc """
@@ -55,12 +55,17 @@ defmodule Exometer.NewrelicReporter.Request do
            |> connect_payload
            |> Poison.encode!
 
-    run_id =
+    Logger.info(inspect(body))
+
+    items_we_want = 
       redirect_host
       |> newrelic_request(license_key, body, %{method: :connect})
       |> extract_return_value
-      |> Map.get("agent_run_id")
+      |> Map.take(["agent_run_id", "messages"])
 
+    Logger.info("Got API message: #{inspect(items_we_want["messages"])}")
+
+    run_id = items_we_want["agent_run_id"]
     {redirect_host, license_key, run_id}
   end
 
@@ -86,6 +91,7 @@ defmodule Exometer.NewrelicReporter.Request do
     |> Poison.decode!
     |> Map.get("return_value")
   end
+
   defp extract_return_value(%Response{status_code: _, body: body}) do
     body
     |> Poison.decode!
@@ -104,6 +110,7 @@ defmodule Exometer.NewrelicReporter.Request do
   defp log_response(%Response{status_code: status_code}) when status_code in 200..299 do
     Logger.info("Successfully submitted to NewRelic")
   end
+
   defp log_response(%Response{status_code: status_code, body: body}) do
     Logger.error("Error submitting to NewRelic (HTTP #{status_code}): #{body}")
   end
@@ -126,10 +133,15 @@ defmodule Exometer.NewrelicReporter.Request do
     {url, params} = newrelic_params(host, license_key, params)
     HTTPoison.get!(url, [], params: params)
   end
+
   defp newrelic_request(host, license_key, body, params) do
     {url, params} = newrelic_params(host, license_key, params)
-    #body = Poison.encode!(body)
-    HTTPoison.post!(url, body, [{"Content-Encoding", "identity"}], params: params)
+    headers = [
+      {"Content-Encoding", "identity"},
+      {"Content-Type", "application/octet-stream"},
+      {"User-Agent", "NewRelic-PythonAgent/#{@agent_version}"}
+    ]
+    HTTPoison.post!(url, body, headers, params: params)
   end
 
   defp pid, do: :os.getpid() |> List.to_integer

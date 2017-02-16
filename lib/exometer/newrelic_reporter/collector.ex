@@ -10,35 +10,34 @@ defmodule Exometer.NewrelicReporter.Collector do
 
   alias __MODULE__, as: Collector
 
-  @empty_storage %{}
-
-  def start_link(opts \\ []),
-    do: GenServer.start_link(Collector, [], name: Collector)
+  def start_link(opts \\ %{}),
+    do: GenServer.start_link(Collector, opts, name: Collector)
 
   @doc """
   Initialize our Collector with empty storage
   """
-  def init(_opts) do
+  def init(opts) do
     Logger.info("Starting NewRelic Collector")
 
-    {:ok, storage: @empty_storage}
+    {:ok, storage: opts}
   end
 
   @doc """
   Record the metric data at the given key on the GenServer
   """
-  def collect(stat_key, data), do: GenServer.cast(Collector, {stat_key, data})
+  def collect(metric, data_point, values, settings) do
+    GenServer.cast(Collector, {metric, data_point, values, settings})
+  end
 
   @doc """
   Asynchronsously store our metric data by the type and name derived from the stat key
   """
-  def handle_cast({stat_key, data}, opts) do
-    storage =
-      stat_key
-      |> type_and_name
-      |> store(data, opts)
+  def handle_cast({metric, data_point, values, settings}, opts) do
+    storage = 
+      storage_key(metric, data_point)
+      |> store(values, opts)
 
-    opts = Keyword.update!(opts, :storage, storage)
+    opts = [storage: storage, settings: settings]
 
     {:noreply, opts}
   end
@@ -49,29 +48,50 @@ defmodule Exometer.NewrelicReporter.Collector do
   def dispense, do: GenServer.call(Collector, :dispense)
 
   @doc """
+  Peek at the stored metrics without flushing them (useful in debugging)
+  """
+  def peek, do: GenServer.call(Collector, :peek)
+
+  @doc """
   Retrieve the current stored values and reset storage
   """
   def handle_call(:dispense, _from, opts) do
-    {data, opts} = Keyword.get_and_update(opts, :storage, &({&1, @empty_storage}))
+    {values, opts} = Keyword.get_and_update(opts, :storage, &({&1, %{}}))
 
-    {:reply, data, opts}
+    {:reply, values, opts}
   end
 
-  defp store(key, data, opts) do
+  @doc """
+  Retrieve the current stored values without resetting
+  """
+  def handle_call(:peek, _from, opts) do
+    values = Keyword.fetch!(opts, :storage)
+
+    {:reply, values, opts}
+  end
+
+  defp store(key, values, opts) do
     now = :os.system_time(:seconds)
+    storage = Keyword.fetch!(opts, :storage)
 
-    :storage
-    |> Keyword.fetch!
-    |> Map.update(key, [], &(&1 ++ [{now, data}]))
+    {type, name} = key
+    entry =
+      storage
+      |> Map.get(type, %{})
+      |> Map.update(name, [{now, values}], &(&1 ++ [{now, values}]))
+    
+    updated = Map.put(%{}, type, entry)
+    Map.merge(storage, updated)
   end
 
-  defp type_and_name(metric) do
+  defp storage_key(metric, data_point) do
+  [:elixometer, :timers, :timed, :"proxyHandler-handle"]
     [_app, _env, type] = Enum.slice(metric, 0..2)
     name =
       metric
       |> Enum.slice(3..-1)
       |> Enum.join("/")
 
-    {type, name}
+    {type, "#{name}/#{data_point}"}
   end
 end
