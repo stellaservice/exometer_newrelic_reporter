@@ -74,24 +74,24 @@ defmodule Exometer.NewrelicReporter.Collector do
     now = :os.system_time(:seconds)
     storage = Keyword.fetch!(opts, :storage)
 
-    {type, name} = key
+    {type, name, data_point} = key
     entry =
       storage
       |> Map.get(type, %{})
-      |> Map.update(name, [{now, values}], &(&1 ++ [{now, values}]))
+      |> Map.get(name, %{})
+      |> Map.update(data_point, [{now, values}], &(&1 ++ [{now, values}]))
     
-    updated = Map.put(%{}, type, entry)
+    updated = Map.put(%{}, type, Map.put(%{}, name, entry))
     Map.merge(storage, updated)
   end
 
   defp storage_key(metric, data_point) do
-  [:elixometer, :timers, :timed, :"proxyHandler-handle"]
     [_app, _env, type] = Enum.slice(metric, 0..2)
     name =
       metric
       |> Enum.slice(3..-1)
       |> Enum.join("/")
 
-    {type, "#{name}/#{data_point}"}
+    {type, name, data_point}
   end
 end

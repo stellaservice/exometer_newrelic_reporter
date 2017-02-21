@@ -39,16 +39,29 @@ defmodule Exometer.NewrelicReporter.Reporter do
     opts
   end
 
+  # Takes exactly what's in the metrics store and posts the contents
+  # to New Relic using the call_count field to contain the metric value
+  defp post_raw_metrics(opts) do
+    Collector.dispense
+    |> Transformer.transform
+    |> Request.request(opts)
+  end
+
+  # Take the data from the metrics store and simulate normal New Relic
+  # metrics
+  defp post_simulated_metrics(_opts) do
+    data = Collector.peek
+  end
+
+# %{timed: %{"proxyHandler-handle" => %{50 => [{1487680368, 1234}]}}}
+
   @doc """
   Collect, aggregate, format, and report our metrics to NewRelic
   """
   def handle_info(:report, opts) do
     Logger.info "Reporting to New Relic"
-
-    Collector.dispense
-    |> Transformer.transform
-    |> Request.request(opts)
-
+    #post_simulated_metrics(opts)
+    post_raw_metrics(opts)
     wait_then_report(opts)
 
     {:noreply, opts}
