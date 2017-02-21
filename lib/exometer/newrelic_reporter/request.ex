@@ -55,15 +55,13 @@ defmodule Exometer.NewrelicReporter.Request do
            |> connect_payload
            |> Poison.encode!
 
-    Logger.info(inspect(body))
-
     items_we_want = 
       redirect_host
       |> newrelic_request(license_key, body, %{method: :connect})
       |> extract_return_value
       |> Map.take(["agent_run_id", "messages"])
 
-    Logger.info("Got API message: #{inspect(items_we_want["messages"])}")
+    Logger.debug "Got API message: #{inspect(items_we_want["messages"])}"
 
     run_id = items_we_want["agent_run_id"]
     {redirect_host, license_key, run_id}
