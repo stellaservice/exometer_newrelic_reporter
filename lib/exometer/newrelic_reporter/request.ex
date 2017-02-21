@@ -153,7 +153,8 @@ defmodule Exometer.NewrelicReporter.Request do
       {:ok, response} ->
         response
 
-      {:error, _} ->
+      {:error, err} ->
+        Logger.warn "Error talking to New Relic: '#{inspect(err)}'. Retrying."
         Process.sleep(@retry_delay[count])
         do_request(url, body, headers, params, count + 1)
     end
