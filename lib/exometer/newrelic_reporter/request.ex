@@ -8,6 +8,8 @@ defmodule Exometer.NewrelicReporter.Request do
   @collector "collector.newrelic.com"
   @language "python"
   @protocol_v 14
+  @max_retries 3
+  @retry_delay [ 1, 5, 7 ]
 
   def request(data, opts) do
     license_key = Keyword.fetch!(opts, :license_key)
@@ -139,7 +141,33 @@ defmodule Exometer.NewrelicReporter.Request do
       {"Content-Type", "application/octet-stream"},
       {"User-Agent", "NewRelic-PythonAgent/#{@agent_version}"}
     ]
-    HTTPoison.post!(url, body, headers, params: params)
+    do_request(url, body, headers, params)
+  end
+
+  # Request with some retries around error conditions. Sleep defined
+  # lengths between retries.
+  defp do_request(url, body, headers, params, count \\ 0)
+
+  defp do_request(url, body, headers, params, count) when count < @max_retries do
+    case HTTPoison.post(url, body, headers, params: params) do
+      {:ok, response} ->
+        response
+
+      {:error, _} ->
+        Process.sleep(@retry_delay[count])
+        do_request(url, body, headers, params, count + 1)
+    end
+  end
+
+  defp do_request(url, body, headers, params, count) when count >= @max_retries do
+    case HTTPoison.post(url, body, headers, params: params) do
+      {:ok, response} ->
+        response
+
+      {:error, err} -> 
+        Logger.error "Failed to post to New Relic, #{@max_retries} retries exceeded. Giving up"
+        err
+    end
   end
 
   defp pid, do: :os.getpid() |> List.to_integer

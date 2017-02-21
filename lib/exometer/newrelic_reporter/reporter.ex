@@ -55,7 +55,8 @@ defmodule Exometer.NewrelicReporter.Reporter do
         Collector.peek
         |> Transformer.synthesize(metrics)
         |> Request.request(opts)
-      :error -> # do nothing
+      :error ->
+        :error
     end
   end
 
