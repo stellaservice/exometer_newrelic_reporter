@@ -41,22 +41,18 @@ defmodule Exometer.NewrelicReporter.Reporter do
 
   # Takes exactly what's in the metrics store and posts the contents
   # to New Relic using the call_count field to contain the metric value
-  defp post_raw_metrics(opts) do
-    Collector.dispense
-    |> Transformer.transform
-    |> Request.request(opts)
+  defp prepare_raw_metrics do
+    Collector.dispense |> Transformer.transform
   end
 
   # Take the data from the metrics store and synthesize normal New Relic
   # metrics
-  defp post_synthesized_metrics(opts) do
+  defp synthesize_metrics(opts) do
     case Keyword.fetch(opts, :synthesize_metrics) do
       {:ok, metrics} ->
-        Collector.peek
-        |> Transformer.synthesize(metrics)
-        |> Request.request(opts)
+        Collector.peek |> Transformer.synthesize(metrics)
       :error ->
-        :error
+        []
     end
   end
 
@@ -67,8 +63,9 @@ defmodule Exometer.NewrelicReporter.Reporter do
   """
   def handle_info(:report, opts) do
     Logger.info "Reporting to New Relic"
-    post_synthesized_metrics(opts)
-    post_raw_metrics(opts)
+
+    synthesize_metrics(opts) ++ prepare_raw_metrics() |> Request.request(opts)
+
     wait_then_report(opts)
 
     {:noreply, opts}
