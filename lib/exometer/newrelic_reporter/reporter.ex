@@ -47,10 +47,16 @@ defmodule Exometer.NewrelicReporter.Reporter do
     |> Request.request(opts)
   end
 
-  # Take the data from the metrics store and simulate normal New Relic
+  # Take the data from the metrics store and synthesize normal New Relic
   # metrics
-  defp post_simulated_metrics(_opts) do
-    data = Collector.peek
+  defp post_synthesized_metrics(opts) do
+    case Keyword.fetch(opts, :synthesize_metrics) do
+      {:ok, metrics} ->
+        Collector.peek
+        |> Transformer.synthesize(metrics)
+        |> Request.request(opts)
+      :error -> # do nothing
+    end
   end
 
 # %{timed: %{"proxyHandler-handle" => %{50 => [{1487680368, 1234}]}}}
@@ -60,7 +66,7 @@ defmodule Exometer.NewrelicReporter.Reporter do
   """
   def handle_info(:report, opts) do
     Logger.info "Reporting to New Relic"
-    #post_simulated_metrics(opts)
+    post_synthesized_metrics(opts)
     post_raw_metrics(opts)
     wait_then_report(opts)
 
