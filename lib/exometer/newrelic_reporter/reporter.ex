@@ -72,6 +72,19 @@ defmodule Exometer.NewrelicReporter.Reporter do
   end
 
   def handle_cast({:config, config}, _opts) do
+    case Keyword.fetch(config, :license_key) do
+      {:ok, _ } -> apply_configuration(config)
+
+      :error -> {:noreply, []}
+    end
+  end
+
+  def handle_cast(msg, opts) do
+    Logger.debug "Got unexpected message: #{inspect(msg)}"
+    {:noreply, opts}
+  end
+
+  defp apply_configuration(config) do
     Logger.info "New Relic Reporter configured with: #{inspect(config)}"
 
     opts_with_interval = case Keyword.fetch(config, :interval) do
@@ -82,11 +95,6 @@ defmodule Exometer.NewrelicReporter.Reporter do
     new_opts = opts_with_interval |> Keyword.merge(config)
     report_now(new_opts)
     {:noreply, new_opts}
-  end
-
-  def handle_cast(msg, opts) do
-    Logger.debug "Got unexpected message: #{inspect(msg)}"
-    {:noreply, opts}
   end
 
   defp wait_then_report(opts) do
