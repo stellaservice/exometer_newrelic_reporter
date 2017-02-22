@@ -73,8 +73,8 @@ defmodule Exometer.NewrelicReporter.Reporter do
 
   def handle_cast({:config, config}, _opts) do
     case Keyword.fetch(config, :license_key) do
+      {:ok, nil} -> {:noreply, []}
       {:ok, _ } -> apply_configuration(config)
-
       :error -> {:noreply, []}
     end
   end
