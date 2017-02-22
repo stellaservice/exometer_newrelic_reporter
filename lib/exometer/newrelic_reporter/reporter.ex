@@ -72,11 +72,17 @@ defmodule Exometer.NewrelicReporter.Reporter do
   end
 
   def handle_cast({:config, config}, _opts) do
-    case Keyword.fetch(config, :license_key) do
-      {:ok, nil} -> {:noreply, []}
-      {:ok, _ } -> apply_configuration(config)
-      :error -> {:noreply, []}
+    result = case Keyword.fetch(config, :license_key) do
+      {:ok, nil} ->
+        Logger.warn "No New Relic license key, skipping reporting"
+        []
+      {:ok, _ } ->
+        apply_configuration(config)
+      :error ->
+        Logger.warn "No New Relic license key, skipping reporting"
+        []
     end
+    {:noreply, result}
   end
 
   def handle_cast(msg, opts) do
