@@ -100,7 +100,7 @@ defmodule Exometer.NewrelicReporter.Reporter do
 
     new_opts = opts_with_interval |> Keyword.merge(config)
     report_now(new_opts)
-    {:noreply, new_opts}
+    new_opts
   end
 
   defp wait_then_report(opts) do
