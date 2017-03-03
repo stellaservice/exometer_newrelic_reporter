@@ -9,7 +9,7 @@ defmodule Exometer.NewrelicReporter.Request do
   @language "python"
   @protocol_v 14
   @max_retries 3
-  @retry_delay [ 1, 5, 7 ]
+  @retry_delay [ 1, 5, 7 ] # Expects at least @max_retries items
 
   def request(data, opts) do
     license_key = Keyword.fetch!(opts, :license_key)
@@ -155,7 +155,7 @@ defmodule Exometer.NewrelicReporter.Request do
 
       {:error, err} ->
         Logger.warn "Error talking to New Relic: '#{inspect(err)}'. Retrying."
-        Process.sleep(@retry_delay[count])
+        Process.sleep(Enum.at(@retry_delay, count))
         do_request(url, body, headers, params, count + 1)
     end
   end
