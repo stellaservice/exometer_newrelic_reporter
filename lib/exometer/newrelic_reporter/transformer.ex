@@ -56,6 +56,10 @@ defmodule Exometer.NewrelicReporter.Transformer do
     synthesize_one(output_name, Map.get(metrics, metric_name))
   end
 
+  def synthesize_one(output_name, values) when is_nil(values) do
+    [ %{name: output_name, scope: ""}, [ 0,0,0,0,0,0 ] ]
+  end
+
   def synthesize_one(output_name, values) when length(values) == 0 do
     [ %{name: output_name, scope: ""}, [ 0,0,0,0,0,0 ] ]
   end
