@@ -65,8 +65,15 @@ defmodule Exometer.NewrelicReporter.Transformer do
   end
 
   def synthesize_one(output_name, values) do
-    %{min: [{_, min}], max: [{_, max}], mean: [{_, mean}], n: [{_, count}]} = values
-    [ %{name: output_name, scope: ""}, [ count, count * mean / 1000, count * mean / 1000, min / 1000, max / 1000, 0 ] ]
+    
+    case values do
+      %{min: [{_, min}], max: [{_, max}], mean: [{_, mean}], n: [{_, count}]} ->
+        [ %{name: output_name, scope: ""}, [ count, count * mean / 1000, count * mean / 1000, min / 1000, max / 1000, 0 ] ]
+
+      _ ->
+        Logger.error "Got unexpected values: #{inspect(values)}. Perhaps missing keys?"
+        [ %{name: output_name, scope: ""}, [ 0,0,0,0,0,0 ] ]
+    end
   end
 
   # Transform dashes into slashes for New Relic namespacing
