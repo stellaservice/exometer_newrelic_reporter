@@ -51,7 +51,7 @@ defmodule Exometer.NewrelicReporter.Collector do
   Peek at the stored metrics without flushing them. Used when synthesizing
   metrics into New Relic combined metrics.
   """
-  def peek, do: GenServer.call(Collector, :peek, 100000)
+  def peek, do: GenServer.call(Collector, :peek)
 
   @doc """
   Retrieve the current stored values and reset storage
@@ -69,15 +69,14 @@ defmodule Exometer.NewrelicReporter.Collector do
     {:reply, values, opts}
   end
 
-  defp store(key, values, opts) do
+  defp store({type, name, data_point}, values, opts) do
     now = :os.system_time(:seconds)
     storage = Keyword.fetch!(opts, :storage)
 
-    {type, name, data_point} = key
     entry = storage
       |> Map.get(type, %{})
       |> Map.get(name, %{})
-      |> Map.update(data_point, [{now, values}], &(&1 ++ [{now, values}]))
+      |> Map.put(data_point, [{now, values}])
 
     updated = %{
       type => %{
