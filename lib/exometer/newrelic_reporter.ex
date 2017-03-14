@@ -2,20 +2,10 @@ defmodule Exometer.NewrelicReporter do
   require Logger
   use Application
 
-  @behaviour :exometer_report
+  alias Exometer.NewrelicReporter.{Collector, ReporterSupervisor, Supervisor}
 
-  alias Exometer.NewrelicReporter.{Collector, Reporter}
-
-  def start(_type, opts) do
-    import Supervisor.Spec, warn: false
-
-    children = [
-      worker(Collector, opts),
-      worker(Reporter, opts)
-    ]
-
-    opts = [strategy: :one_for_one, name: Collector.Supervisor]
-    Supervisor.start_link(children, opts)
+  def start(_type, _opts) do
+    Supervisor.start_link()
   end
 
   @doc """
@@ -23,7 +13,9 @@ defmodule Exometer.NewrelicReporter do
   """
   def exometer_init(opts) do 
     Logger.info "New Relic plugin starting with opts: #{inspect(opts)}"
-    Reporter.set_configuration(opts)
+    # This is the first place we have access to the configuration
+    # so we start the supervisor here
+    ReporterSupervisor.start_link(opts)
     {:ok, opts}
   end
 
@@ -31,6 +23,7 @@ defmodule Exometer.NewrelicReporter do
   Invoked by Exometer when there is new data to report.
   """
   def exometer_report(metric, data_point, _extra, values, settings) do
+    Logger.info "Got #{inspect(metric)}, #{data_point}, #{inspect(values)}"
     Collector.collect(metric, data_point, values, settings)
     {:ok, settings}
   end

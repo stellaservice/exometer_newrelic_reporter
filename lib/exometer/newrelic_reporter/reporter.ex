@@ -22,27 +22,32 @@ defmodule Exometer.NewrelicReporter.Reporter do
   get our configuration passed to set_configuration/1.
   """
   def init(opts) do
-    {:ok, opts}
-  end
+    Logger.info "New Relic Reporter configured with: #{inspect(opts)}"
 
-  def set_configuration(config) do
-    GenServer.cast(Reporter, {:config, config})
+    opts_with_interval = case Keyword.fetch(opts, :interval) do
+      {:ok, _} -> opts
+      :error -> Keyword.put_new(opts, :interval, @default_interval)
+    end
+
+    new_opts = opts_with_interval |> Keyword.merge(opts)
+    report_now(new_opts)
+    {:ok, new_opts}
   end
 
   @doc """
-  Report into New Relic "now" (after waiting about 500ms). Used
+  Report into New Relic "now" (after waiting about 1000ms). Used
   when we need to send data more or less right away, without
   waiting on the timer loop.
   """
   def report_now(opts) do
-    Process.send_after(Reporter, :report, 500)
+    Process.send_after(Reporter, :report, 1000)
     opts
   end
 
   # Takes exactly what's in the metrics store and posts the contents
   # to New Relic using the call_count field to contain the metric value
   defp prepare_raw_metrics do
-    Collector.dispense |> Transformer.transform
+    Collector.peek |> Transformer.transform
   end
 
   # Take the data from the metrics store and synthesize normal New Relic
@@ -65,42 +70,14 @@ defmodule Exometer.NewrelicReporter.Reporter do
     Logger.info "Reporting to New Relic"
 
     synthesize_metrics(opts) ++ prepare_raw_metrics() |> Request.request(opts)
-
+    Collector.empty
     wait_then_report(opts)
-
     {:noreply, opts}
-  end
-
-  def handle_cast({:config, config}, _opts) do
-    result = case Keyword.fetch(config, :license_key) do
-      {:ok, nil} ->
-        Logger.warn "No New Relic license key, skipping reporting"
-        []
-      {:ok, _ } ->
-        apply_configuration(config)
-      :error ->
-        Logger.warn "No New Relic license key, skipping reporting"
-        []
-    end
-    {:noreply, result}
   end
 
   def handle_cast(msg, opts) do
     Logger.debug "Got unexpected message: #{inspect(msg)}"
     {:noreply, opts}
-  end
-
-  defp apply_configuration(config) do
-    Logger.info "New Relic Reporter configured with: #{inspect(config)}"
-
-    opts_with_interval = case Keyword.fetch(config, :interval) do
-      {:ok, _} -> config
-      :error -> Keyword.put_new(config, :interval, @default_interval)
-    end
-
-    new_opts = opts_with_interval |> Keyword.merge(config)
-    report_now(new_opts)
-    new_opts
   end
 
   defp wait_then_report(opts) do

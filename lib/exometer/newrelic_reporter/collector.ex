@@ -10,16 +10,16 @@ defmodule Exometer.NewrelicReporter.Collector do
 
   alias __MODULE__, as: Collector
 
-  def start_link(opts \\ %{}),
-    do: GenServer.start_link(Collector, opts, name: Collector)
+  def start_link(opts \\ %{}) do
+    GenServer.start_link(Collector, opts, name: Collector)
+  end
 
   @doc """
   Initialize our Collector with empty storage
   """
   def init(opts) do
     Logger.info("Starting NewRelic Collector")
-
-    {:ok, storage: opts}
+    {:ok, settings: opts, storage: %{}}
   end
 
   @doc """
@@ -43,22 +43,21 @@ defmodule Exometer.NewrelicReporter.Collector do
   end
 
   @doc """
-  Dispense all of our stored metrics
+  Empty all of our stored metrics
   """
-  def dispense, do: GenServer.call(Collector, :dispense)
+  def empty, do: GenServer.call(Collector, :empty)
 
   @doc """
-  Peek at the stored metrics without flushing them (useful in debugging)
+  Peek at the stored metrics without flushing them. Used when synthesizing
+  metrics into New Relic combined metrics.
   """
-  def peek, do: GenServer.call(Collector, :peek)
+  def peek, do: GenServer.call(Collector, :peek, 100000)
 
   @doc """
   Retrieve the current stored values and reset storage
   """
-  def handle_call(:dispense, _from, opts) do
-    {values, opts} = Keyword.get_and_update(opts, :storage, &({&1, %{}}))
-
-    {:reply, values, opts}
+  def handle_call(:empty, _from, opts) do
+    {:reply, :ok, Keyword.put(opts, :storage, %{})}
   end
 
   @doc """
@@ -75,14 +74,18 @@ defmodule Exometer.NewrelicReporter.Collector do
     storage = Keyword.fetch!(opts, :storage)
 
     {type, name, data_point} = key
-    entry =
-      storage
+    entry = storage
       |> Map.get(type, %{})
       |> Map.get(name, %{})
       |> Map.update(data_point, [{now, values}], &(&1 ++ [{now, values}]))
+
+    updated = %{
+      type => %{
+        name => entry
+      }
+    }
     
-    updated = Map.put(%{}, type, Map.put(%{}, name, entry))
-    Map.merge(storage, updated)
+    MapUtils.deep_merge(storage, updated)
   end
 
   defp storage_key(metric, data_point) do

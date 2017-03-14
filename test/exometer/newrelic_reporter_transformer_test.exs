@@ -1,6 +1,6 @@
-defmodule ExometerNewrelicReporterTest do
+defmodule ExometerNewrelicReporterTransformerTest do
   use ExUnit.Case
-  doctest Exometer.NewrelicReporter
+  doctest Exometer.NewrelicReporter.Transformer
 
   alias Exometer.NewrelicReporter.Transformer
 
