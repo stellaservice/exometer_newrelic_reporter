@@ -23,7 +23,6 @@ defmodule Exometer.NewrelicReporter do
   Invoked by Exometer when there is new data to report.
   """
   def exometer_report(metric, data_point, _extra, values, settings) do
-    Logger.info "Got #{inspect(metric)}, #{data_point}, #{inspect(values)}"
     Collector.collect(metric, data_point, values, settings)
     {:ok, settings}
   end
