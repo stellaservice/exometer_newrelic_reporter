@@ -34,12 +34,12 @@ or Elixir.
 The following assumes you're using Elixometer though configuration should be similar for Exometer:
 
 ```elixir
-# If we have a NEWRELIC_LICENSE_KEY, we'll use a New Relic reporter
+# If we have a NEW_RELIC_LICENSE_KEY, we'll use a New Relic reporter
 if System.get_env("NEW_RELIC_LICENSE_KEY") != "" do
   config :exometer_core, report: [
     reporters: ["Elixir.Exometer.NewrelicReporter":
       [
-        application_name: "Spacesuit #{System.get_env("MIX_ENV") || "development"}",
+        application_name: "Spacesuit #{Mix.env}",
         license_key: System.get_env("NEW_RELIC_LICENSE_KEY"),
         synthesize_metrics: %{
           "proxyHandler-handle" => "HttpDispatcher"
@@ -69,8 +69,8 @@ calling Raw Metrics.
 
 But New Relic metrics actually contain a few fields that allow them to be
 used in the normal ways you expect. They actually contain:
-```python
-[call count, total, exclusive, min, max, sumSquares]
+```elixir
+[call_count, total, exclusive, min, max, sum_of_squares]
 ```
 
 This reporter supports generating metrics that look like this from histograms
@@ -91,6 +91,6 @@ metric looks like this:
   end
 ```
 
-**Note:** The units is important here. Elixometer will by default capture
-in microseconds, which is not what New Relic is expecting. If you don't
+**Note:** The `units` entry is important here. Elixometer will by default
+capture in microseconds, which is not what New Relic is expecting. If you don't
 pass this value, you'll see weird numbers in the New Relic console.
