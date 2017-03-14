@@ -42,7 +42,7 @@ defmodule ExometerNewrelicReporterCollectorTest do
       Collector.collect([:elixometer, :timers, :timed, "anotherMetric"], key, values, %{})
     end
 
-    assert %{timed: %{"proxyHandler-handle" => timings}} = Collector.peek()
-    assert %{timed: %{"anotherMetric" => timings}} = Collector.peek()
+    assert %{timed: %{"proxyHandler-handle" => _}} = Collector.peek()
+    assert %{timed: %{"anotherMetric" => _}} = Collector.peek()
   end
 end
