@@ -15,7 +15,11 @@ defmodule Exometer.NewrelicReporter do
     Logger.info "New Relic plugin starting with opts: #{inspect(opts)}"
     # This is the first place we have access to the configuration
     # so we start the supervisor here
-    ReporterSupervisor.start_link(opts)
+    if Keyword.get(opts, :license_key) && Keyword.get(opts, :application_name) do
+      ReporterSupervisor.start_link(opts)
+    else
+      Logger.warn "Missing New Relic license key or application name, skipping startup!"
+    end
     {:ok, opts}
   end
 

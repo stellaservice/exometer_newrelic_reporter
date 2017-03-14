@@ -1,11 +1,11 @@
 defmodule Exometer.NewrelicReporter.Request do
   require Logger
 
-  alias HTTPoison.Response
+  alias HTTPoison.{Response, Error}
 
   @agent_version "2.78.0.57"
   @base_url "https://~s/agent_listener/invoke_raw_method"
-  @collector "collector.newrelic.com"
+  @collector "collector-pool.newrelic.com"
   @language "python"
   @protocol_v 14
   @max_retries 3
@@ -84,6 +84,11 @@ defmodule Exometer.NewrelicReporter.Request do
       pid:           pid(),
       settings:      %{}
     }]
+  end
+
+  defp extract_return_value(%Error{id: _, reason: reason}) do
+    Logger.error "Error from New Relic connect: #{reason}"
+    throw(:newrelic_error)
   end
 
   defp extract_return_value(%Response{status_code: 200, body: body}) do
