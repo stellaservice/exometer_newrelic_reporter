@@ -1,5 +1,7 @@
 # Exometer NewRelic Reporter
 
+![travis status](https://api.travis-ci.org/Nitro/exometer_newrelic_reporter.svg)
+
 This uses [exometer](https://github.com/Feuerlabs/exometer) for metrics
 gathering and is installed with Pinterest's
 [elixometer](https://github.com/pinterest/elixometer) wrapper which makes
