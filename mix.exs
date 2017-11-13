@@ -22,7 +22,7 @@ defmodule Exometer.NewrelicReporter.Mixfile do
   defp deps do
     [
       {:httpoison, "~> 0.9.0"},
-      {:poison, "~> 2.0"},
+      {:poison, "~> 2.0 or ~> 3.0" },
       {:excoveralls, "~> 0.6", only: :test}
     ]
   end
