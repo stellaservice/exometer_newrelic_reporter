@@ -5,7 +5,7 @@ defmodule Exometer.NewrelicReporter.Request do
 
   @agent_version "2.78.0.57"
   @base_url "https://~s/agent_listener/invoke_raw_method"
-  @collector "collector-pool.newrelic.com"
+  @collector "collector.newrelic.com"
   @language "python"
   @protocol_v 14
   @max_retries 3
@@ -57,7 +57,7 @@ defmodule Exometer.NewrelicReporter.Request do
            |> connect_payload
            |> Poison.encode!
 
-    items_we_want = 
+    items_we_want =
       redirect_host
       |> newrelic_request(license_key, body, %{method: :connect})
       |> extract_return_value
@@ -170,7 +170,7 @@ defmodule Exometer.NewrelicReporter.Request do
       {:ok, response} ->
         response
 
-      {:error, err} -> 
+      {:error, err} ->
         Logger.error "Failed to post to New Relic, #{@max_retries} retries exceeded. Giving up"
         err
     end
