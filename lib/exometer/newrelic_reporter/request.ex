@@ -4,7 +4,7 @@ defmodule Exometer.NewrelicReporter.Request do
   alias HTTPoison.{Response, Error}
 
   @agent_version "2.78.0.57"
-  @base_url "https://~s/agent_listener/invoke_raw_method"
+  @base_url "https://~s/agent_listener/invoke_raw_method/"
   @collector "collector.newrelic.com"
   @language "python"
   @protocol_v 14
